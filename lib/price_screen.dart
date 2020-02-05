@@ -1,6 +1,7 @@
 // load only the Platform packages form inside dart:io
 import 'dart:io' show Platform;
 
+import 'package:bitcoin_ticker/services/exchange.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,10 @@ class PriceScreen extends StatefulWidget {
 
 class _PriceScreenState extends State<PriceScreen> {
   String selectedCurrency = 'USD';
+  String sourceCurrency = 'BTC';
+  String exchangeRate = '?';
+
+  ExchangeModel exchangeModel = ExchangeModel();
 
   /**
    * Render android dropdown style
@@ -28,7 +33,7 @@ class _PriceScreenState extends State<PriceScreen> {
               ),
             )
             .toList(),
-        onChanged: (value) => setState(() => selectedCurrency = value));
+        onChanged: (value) => updateUi(value));
   }
 
   /**
@@ -41,7 +46,7 @@ class _PriceScreenState extends State<PriceScreen> {
       backgroundColor: Colors.lightBlue,
       itemExtent: 32.0,
       onSelectedItemChanged: (selectedIndex) =>
-          setState(() => selectedCurrency = currenciesList[selectedIndex]),
+          updateUi(currenciesList[selectedIndex]),
       children: currenciesList
           .map((currency) => Text(
                 currency,
@@ -59,8 +64,20 @@ class _PriceScreenState extends State<PriceScreen> {
     }
   }
 
+  void updateUi(String currency) async {
+    var exchange =
+        await exchangeModel.getExchange(sourceCurrency, selectedCurrency);
+    double tmp = exchange['rate'];
+
+    setState(() {
+      selectedCurrency = currency;
+      exchangeRate = tmp.toInt().toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    exchangeModel.getExchange(sourceCurrency, selectedCurrency);
     return Scaffold(
       appBar: AppBar(
         title: Text('🤑 Coin Ticker'),
@@ -69,27 +86,18 @@ class _PriceScreenState extends State<PriceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.lightBlueAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 BTC = ? $selectedCurrency',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-          ),
+          DisplayExchangeWidget(
+              sourceCurrency: sourceCurrency,
+              exchangeRate: exchangeRate,
+              selectedCurrency: selectedCurrency),
+          DisplayExchangeWidget(
+              sourceCurrency: sourceCurrency,
+              exchangeRate: exchangeRate,
+              selectedCurrency: selectedCurrency),
+          DisplayExchangeWidget(
+              sourceCurrency: sourceCurrency,
+              exchangeRate: exchangeRate,
+              selectedCurrency: selectedCurrency),
           Container(
             height: 150.0,
             alignment: Alignment.center,
@@ -98,6 +106,44 @@ class _PriceScreenState extends State<PriceScreen> {
             child: Platform.isIOS ? iOSPicker() : androidDropdown(),
           )
         ],
+      ),
+    );
+  }
+}
+
+class DisplayExchangeWidget extends StatelessWidget {
+  const DisplayExchangeWidget({
+    Key key,
+    @required this.sourceCurrency,
+    @required this.exchangeRate,
+    @required this.selectedCurrency,
+  }) : super(key: key);
+
+  final String sourceCurrency;
+  final String exchangeRate;
+  final String selectedCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
+      child: Card(
+        color: Colors.lightBlueAccent,
+        elevation: 5.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 8.0),
+          child: Text(
+            '1 $sourceCurrency = $exchangeRate $selectedCurrency',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20.0,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }

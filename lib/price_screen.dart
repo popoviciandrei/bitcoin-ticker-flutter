@@ -14,8 +14,12 @@ class PriceScreen extends StatefulWidget {
 
 class _PriceScreenState extends State<PriceScreen> {
   String selectedCurrency = 'USD';
-  String sourceCurrency = 'BTC';
-  String exchangeRate = '?';
+  List<String> sourceCurrencies = ['BTC', 'ETH', 'LTC'];
+  Map<String, String> exchangeRates = {
+    'BTC': '?',
+    'ETH': '?',
+    'LTC': '?',
+  };
 
   ExchangeModel exchangeModel = ExchangeModel();
 
@@ -64,40 +68,44 @@ class _PriceScreenState extends State<PriceScreen> {
     }
   }
 
-  void updateUi(String currency) async {
-    var exchange =
-        await exchangeModel.getExchange(sourceCurrency, selectedCurrency);
-    double tmp = exchange['rate'];
+  void updateUi(String newCurrencyCode) async {
+    Map<String, String> newRates = {};
+
+    await Future.forEach(sourceCurrencies, (currencyCode) async {
+      var exchangeRate =
+          await exchangeModel.getExchange(currencyCode, newCurrencyCode);
+      double tmp = exchangeRate['rate'];
+      newRates.addAll({currencyCode: tmp.toInt().toString()});
+    });
 
     setState(() {
-      selectedCurrency = currency;
-      exchangeRate = tmp.toInt().toString();
+      selectedCurrency = newCurrencyCode;
+      newRates.forEach((key, exchangeRate) {
+        exchangeRates.update(key, (value) => exchangeRate);
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    exchangeModel.getExchange(sourceCurrency, selectedCurrency);
     return Scaffold(
       appBar: AppBar(
         title: Text('🤑 Coin Ticker'),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          DisplayExchangeWidget(
-              sourceCurrency: sourceCurrency,
-              exchangeRate: exchangeRate,
-              selectedCurrency: selectedCurrency),
-          DisplayExchangeWidget(
-              sourceCurrency: sourceCurrency,
-              exchangeRate: exchangeRate,
-              selectedCurrency: selectedCurrency),
-          DisplayExchangeWidget(
-              sourceCurrency: sourceCurrency,
-              exchangeRate: exchangeRate,
-              selectedCurrency: selectedCurrency),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              ...sourceCurrencies.map(
+                (value) => DisplayExchangeWidget(
+                    sourceCurrency: value,
+                    exchangeRate: exchangeRates[value],
+                    selectedCurrency: selectedCurrency),
+              ),
+            ],
+          ),
           Container(
             height: 150.0,
             alignment: Alignment.center,
@@ -125,7 +133,7 @@ class DisplayExchangeWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return Container(
       padding: EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
       child: Card(
         color: Colors.lightBlueAccent,
